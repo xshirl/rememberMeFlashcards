@@ -116,11 +116,11 @@ const getFlashcards = async(req, res) => {
   try {
     const legit = await userOfRequest(req);
     if(legit) {
-      const categoryId = req.params.id;
+      const categoryId = req.params.category_id;
       const flashcards = await Flashcard.find(
         {"category": categoryId}
       );
-      return res.status(200).json(categories);
+      return res.status(200).json(flashcards);
     }
     return res.status(401).send("Not Authorized");
 
@@ -129,7 +129,100 @@ const getFlashcards = async(req, res) => {
   }
 }
 
+const getFlashcard = async(req, res) => {
+  try {
+    const legit = await userOfRequest(req);
+    if(legit) {
+      const { flashcard_id } = req.params;
+      const flashcard = await Flashcard.findById(flashcard_id);
+      return res.status(200).json(flashcard);
+    }
+    return res.status(401).send("Not Authorized");
+
+  } catch(error) {
+    return res.status(500).json({error: error.message})
+  }
+}
+
+const createFlashcard = async(req, res) => {
+  try {
+    const legit = await userOfRequest(req);
+    if(legit) {
+      const flashcard = req.body;
+      flashcard.category = req.params.category_id;
+      flashcard.author = legit.id;
+      const flashcard = await new Flashcard(flashcard);
+      await flashcard.save();
+      return res.status(200).json(flashcard);
+    }
+    return res.status(401).send("Not Authorized")
+  }catch(error) {
+    return res.status(500).json({error: error.message})
+  }
+}
+
+const editFlashcard = async(req, res) => {
+  try {
+    const legit = await userOfRequest(req);
+    if(legit) {
+      const flashcard = await Flashcard.findById(req.params.flashcard_id);
+      if(legit.id !== flashcard.author.toString()) {
+        return res.status(401).send("Not Authorized");
+      }
+      const flashcard = req.body;
+      flashcard.category = req.params.category_id;
+      await Flashcard.findByIdAndUpdate(
+        req.params.flashcard_id,
+        flashcard,
+        {new:true},
+        (error, flashcard) => {
+          if (error) {
+            return res.status(500).json({ error: error.message });
+          }
+          if (!flashcard) {
+            return res.status(404).json({ message: "Flashcard not found!" });
+          }
+          return res.status(200).json(flashcard);
+        }
+      )
+    }else {
+      return res.status(401).send("Not Authorized");
+    }
+  } catch(error) {
+    return res.status(500).json({error: error.message})
+  }
+}
+
+const deleteFlashcard = async(req, res) => {
+  try {
+    const legit = await userOfRequest(req);
+    if(legit) {
+      const flaschard = await Flashcard.findById(req.params.flashcard_id);
+      if(!flashcard) {
+        return res.status(401).send("No flashcard found");
+      }
+      if (legit.id != flashcard.author.toString()){
+        return res.status(401).send("Not authorized");
+      }
+
+      const deletion = await Flashcard.findByIdAndDelete(req.params.flashcard_id);
+      return res.status(200).json(deletion);
+    }
+    return res.status(401).send("Not authorized");
+  } catch(error){
+    return res.status(500).json({error: error.message});
+  }
+}
 
 module.exports = {
+  getFlashcards,
+  getFlashcard,
+  createFlashcard,
+  updateFlashcard,
+  deleteFlashcard,
+  getCategories,
+  verifyUser,
+  signUp,
+  signIn
   // export using names of functions in this object
 }
